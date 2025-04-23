@@ -4,6 +4,8 @@ import java.awt.event.*;
 import java.util.ArrayList;
 import java.util.Iterator;
 
+//test123
+
 public class SimpleStarWar extends JPanel implements ActionListener, KeyListener {
     // 飛船位置
     private int shipX = 200, shipY = 450;
