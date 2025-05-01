@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+
 public class SimpleStarWar extends JPanel implements ActionListener, KeyListener {
     // 玩家
     private PlayerShip ship;
@@ -13,9 +14,11 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
     private List<Point> bullets = new ArrayList<Point>();
 
     // 敵人
-    private List<Rectangle> enemies = new ArrayList<Rectangle>();
-    private int enemySpeed = 2;           // 整體水平速度
-    private static final int DROP_DIST = 10; // 每次下移量
+    List<Enemy> enemies = new ArrayList<>();
+
+    private int spawnTimer = 0;
+
+
 
     // 分數
     private int score = 0;
@@ -25,22 +28,31 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
     public SimpleStarWar() {
         setPreferredSize(new Dimension(480, 500));
         setBackground(Color.BLACK);
-        setFocusable(true);
-        addKeyListener(this);
+        setFocusable(true);//這個 SimpleStarWar 面板要負責監聽鍵盤事件
+        addKeyListener(this);//Java GUI 元件預設是不能接收鍵盤事件的要先設定可以 focus，才會收到鍵盤事件
 
         ship = new PlayerShip(200, 450);
 
-        // 初始化敵人：4 行 8 列，每格 40×20，間隔 10 px
-        int rows = 4, cols = 8;
-        int w = 40, h = 20, paddingX = 10, paddingY = 10;
-        int startX = 30, startY = 30;
-        for (int r = 0; r < rows; r++) {
-            for (int c = 0; c < cols; c++) {
-                int x = startX + c * (w + paddingX);
-                int y = startY + r * (h + paddingY);
-                enemies.add(new Rectangle(x, y, w, h));
+        //用滑鼠移動
+        addMouseMotionListener(new MouseMotionAdapter() {
+            @Override
+            public void mouseMoved(MouseEvent e) {
+                ship.setX(e.getX());
+                repaint();
             }
-        }
+        });
+        //用左鍵射擊
+        addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                bullets.add(new Point(ship.getX() + PlayerShip.WIDTH / 2 - 2, ship.getY()));
+            }
+        });
+       
+
+        
+
+        
 
         // 遊戲循環：每 16 ms 更新一次
         timer = new Timer(16, this);
@@ -60,71 +72,70 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
             g.fillRect(b.x, b.y, 4, 10);
         }
 
-        // 畫敵人
-        g.setColor(Color.RED);
-        for (Rectangle e : enemies) {
-            g.fillRect(e.x, e.y, e.width, e.height);
-        }
-
         // 畫分數
         g.setColor(Color.WHITE);
         g.drawString("Score: " + score, 10, 20);
+
+        // 畫出敵人
+        for (Enemy e : enemies) {
+            e.draw(g);
+        }
     }
+    
+    
 
     @Override
     public void actionPerformed(ActionEvent e) {
-        // 1. 更新子彈：往上移，出界就移除
+        // 1. 每秒新增一個敵人
+        spawnTimer += 16;
+        if (spawnTimer >= 1000) {
+            enemies.add(new Enemy((int)(Math.random() * 440)));
+            spawnTimer = 0;
+        }
+
+        // 2. 更新子彈
         Iterator<Point> bit = bullets.iterator();
         while (bit.hasNext()) {
             Point b = bit.next();
             b.y -= 8;
-            if (b.y < 0) {
-                bit.remove();
-            }
+            if (b.y < 0) bit.remove();
         }
 
-        // 2. 更新敵人位置：水平移動，碰邊就反向並下移
-        boolean hitEdge = false;
-        for (Rectangle enemy : enemies) {
-            enemy.x += enemySpeed;
-            if (enemy.x < 0 || enemy.x + enemy.width > getWidth()) {
-                hitEdge = true;
-            }
-        }
-        if (hitEdge) {
-            enemySpeed = -enemySpeed;
-            for (Rectangle enemy : enemies) {
-                enemy.y += DROP_DIST;
-            }
+        // 3. 更新敵人
+        for (Enemy enemy : enemies) {
+            enemy.update();
         }
 
-        // 3. 碰撞檢測：子彈 vs 敵人
-        Iterator<Rectangle> eit = enemies.iterator();
+        // 4. 清除超出底部的敵人
+        enemies.removeIf(enemy -> enemy.getY() > getHeight());
+
+        // 5. 碰撞檢查：子彈 vs 敵人
+        Iterator<Enemy> eit = enemies.iterator();
         while (eit.hasNext()) {
-            Rectangle enemy = eit.next();
+            Enemy enemy = eit.next();
             boolean removed = false;
+
             Iterator<Point> bit2 = bullets.iterator();
             while (bit2.hasNext()) {
                 Point b = bit2.next();
                 Rectangle shot = new Rectangle(b.x, b.y, 4, 10);
-                if (shot.intersects(enemy)) {
-                    // 碰撞：移除敵人與子彈，+1 分
+                if (shot.intersects(enemy.getBounds())) {
                     eit.remove();
-                    bit2.remove();
-                    score += 1;
+                    bit2.remove();  // ✅ 用正確的迭代器
+                    score++;
                     removed = true;
                     break;
                 }
             }
-            if (removed) {
-                // 如果這個敵人已被移除，不用再檢查它
-                continue;
-            }
+
+            if (removed) continue;
         }
 
         repaint();
     }
 
+    
+    
     // 鍵盤控制：左右移動 + 空白鍵發射
     @Override
     public void keyPressed(KeyEvent e) {

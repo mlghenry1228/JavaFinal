@@ -21,5 +21,12 @@ class PlayerShip {
         g.setColor(Color.GREEN);
         g.fillRect(x, y, WIDTH, HEIGHT);
     }
+    public void setX(int x) {
+        if (x < 0) this.x = 0;
+        else if (x > 480 - WIDTH) this.x = 480 - WIDTH;  // 480 是視窗寬度
+        else this.x = x;
+    }
+    
+    
 }
 
