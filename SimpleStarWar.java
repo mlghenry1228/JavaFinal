@@ -4,7 +4,6 @@ import java.awt.event.*;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Random;
 
 public class SimpleStarWar extends JPanel implements ActionListener, KeyListener {
     // Player ship
@@ -22,14 +21,11 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
     // Enemy spawn timer (ms)
     private int spawnTimer = 0;
 
-    // Enemy shooting timer (ms)
-    private int enemyShootTimer = 0;
-
     // Score
     private int score = 0;
 
     // Player health points
-    private int playerHP = 100;
+    private int playerHP = 3;
 
     // Game over flag
     private boolean gameOver = false;
@@ -43,8 +39,11 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
     // Timer for continuous shooting (spacebar)
     private Timer spaceShootTimer;
 
-    // Random for enemy shooting
-    private Random random = new Random();
+    
+
+    private int spawnCooldown = 250;      // 初始 0.25 秒
+    
+
 
     public SimpleStarWar() {
         setPreferredSize(new Dimension(480, 500));
@@ -146,21 +145,29 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
     @Override
     public void actionPerformed(ActionEvent e) {
         if (gameOver) return;
+        
+        // 每得 50 分降低冷卻（最小不能低於指定值）
+        int level = score / 50;
+        spawnCooldown = Math.max(80, 250 - level * 30);   // 每 50 分快 30ms，最小 80ms
+        
 
-        // Spawn enemy every second
+        // Spawn enemy every 0.25 second
         spawnTimer += 16;
-        if (spawnTimer >= 1000) {
+        if (spawnTimer >= spawnCooldown) {
             enemies.add(new Enemy((int)(Math.random() * 440)));
             spawnTimer = 0;
         }
 
-        // Enemy shooting every 2 seconds
-        enemyShootTimer += 16;
-        if (enemyShootTimer >= 2000 && !enemies.isEmpty()) {
-            Enemy shooter = enemies.get(random.nextInt(enemies.size()));
-            enemyBullets.add(new Point(shooter.getBounds().x + shooter.getBounds().width / 2 - 2, shooter.getBounds().y + shooter.getBounds().height));
-            enemyShootTimer = 0;
+        // Enemy shooting 
+        for (Enemy enemy : enemies) {
+            if (enemy.shouldShoot()) {
+                enemyBullets.add(new Point(
+                    enemy.getBounds().x + enemy.getBounds().width / 2 - 2,
+                    enemy.getBounds().y + enemy.getBounds().height
+                ));
+            }
         }
+        
 
         // Update player bullets
         Iterator<Point> bit = bullets.iterator();
@@ -185,6 +192,16 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
 
         // Remove enemies that move off-screen
         enemies.removeIf(enemy -> enemy.getY() > getHeight());
+
+        // 如果場上敵人超過 15 個，直接 Game Over
+        if (enemies.size() > 15) {
+            gameOver = true;
+            timer.stop();
+            if (mouseShootTimer != null) mouseShootTimer.stop();
+            if (spaceShootTimer != null) spaceShootTimer.stop();
+            repaint();
+            return;  // 不要再執行後面的碰撞與 repaint
+        }
 
         // Check collisions: player bullets vs enemies
         Iterator<Enemy> eit = enemies.iterator();
@@ -215,7 +232,7 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
             Rectangle shot = new Rectangle(b.x, b.y, 4, 10);
             if (shot.intersects(ship.getBounds())) {
                 ebit2.remove();
-                playerHP -= 20;
+                playerHP -= 1;
                 if (playerHP <= 0) {
                     playerHP = 0;
                     gameOver = true;

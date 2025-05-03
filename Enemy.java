@@ -4,6 +4,10 @@ public class Enemy {
     private int x, y;
     private int width = 40, height = 20;
     private boolean landed = false;
+    private int shootTimer = 0;
+    private int shootCooldown = 1000 + (int)(Math.random() * 500); // 每隻間隔不同
+    private int dx = (Math.random() < 0.5 ? -1 : 1) * (1 + (int)(Math.random() * 2)); // -2~2
+
 
     // Construct enemy at given X position
     public Enemy(int x) {
@@ -23,8 +27,18 @@ public class Enemy {
             if (y >= 100 + (int)(Math.random() * 100)) {
                 landed = true; // Stop at random height
             }
+        } else {
+            // After landing, move left/right
+            x += dx;
+
+            // Bounce if hit screen edge
+            if (x < 0 || x + width > 480) {
+                dx = -dx;
+                x += dx; // Prevent sticking
+            }
         }
     }
+
 
     // Draw enemy as an alien ship with spikes and core
     public void draw(Graphics g) {
@@ -54,4 +68,13 @@ public class Enemy {
     public Rectangle getBounds() {
         return new Rectangle(x, y, width, height);
     }
+    public boolean shouldShoot() {
+        shootTimer += 16;
+        if (shootTimer >= shootCooldown) {
+            shootTimer = 0;
+            return true;
+        }
+        return false;
+    }
+    
 }
