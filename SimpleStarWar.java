@@ -4,13 +4,17 @@ import java.awt.event.*;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Random;
 
 public class SimpleStarWar extends JPanel implements ActionListener, KeyListener {
     // Player ship
     private PlayerShip ship;
 
-    // Bullets
+    // Player bullets
     private List<Point> bullets = new ArrayList<>();
+
+    // Enemy bullets
+    private List<Point> enemyBullets = new ArrayList<>();
 
     // Enemies
     private List<Enemy> enemies = new ArrayList<>();
@@ -18,8 +22,17 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
     // Enemy spawn timer (ms)
     private int spawnTimer = 0;
 
+    // Enemy shooting timer (ms)
+    private int enemyShootTimer = 0;
+
     // Score
     private int score = 0;
+
+    // Player health points
+    private int playerHP = 100;
+
+    // Game over flag
+    private boolean gameOver = false;
 
     // Timer for game loop
     private Timer timer;
@@ -29,6 +42,9 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
 
     // Timer for continuous shooting (spacebar)
     private Timer spaceShootTimer;
+
+    // Random for enemy shooting
+    private Random random = new Random();
 
     public SimpleStarWar() {
         setPreferredSize(new Dimension(480, 500));
@@ -42,14 +58,18 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
         MouseMotionAdapter mouseMotion = new MouseMotionAdapter() {
             @Override
             public void mouseMoved(MouseEvent e) {
-                ship.setX(e.getX());
-                repaint();
+                if (!gameOver) {
+                    ship.setX(e.getX());
+                    repaint();
+                }
             }
 
             @Override
             public void mouseDragged(MouseEvent e) {
-                ship.setX(e.getX());
-                repaint();
+                if (!gameOver) {
+                    ship.setX(e.getX());
+                    repaint();
+                }
             }
         };
         addMouseMotionListener(mouseMotion);
@@ -58,7 +78,7 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
         addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
-                if (e.getButton() == MouseEvent.BUTTON1) {
+                if (!gameOver && e.getButton() == MouseEvent.BUTTON1) {
                     // Fire immediately
                     bullets.add(new Point(ship.getX() + PlayerShip.WIDTH / 2 - 2, ship.getY()));
                     // Start continuous shooting every 200ms
@@ -86,18 +106,36 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
 
+        if (gameOver) {
+            // Draw game over screen
+            g.setColor(Color.WHITE);
+            g.setFont(new Font("Arial", Font.BOLD, 30));
+            String message = "Game Over";
+            int messageWidth = g.getFontMetrics().stringWidth(message);
+            g.drawString(message, (getWidth() - messageWidth) / 2, getHeight() / 2);
+            return;
+        }
+
         // Draw player ship
         ship.draw(g);
 
-        // Draw bullets
+        // Draw player bullets
         g.setColor(Color.YELLOW);
         for (Point b : bullets) {
             g.fillRect(b.x, b.y, 4, 10);
         }
 
-        // Draw score
+        // Draw enemy bullets
+        g.setColor(Color.RED);
+        for (Point b : enemyBullets) {
+            g.fillRect(b.x, b.y, 4, 10);
+        }
+
+        // Draw score and HP
         g.setColor(Color.WHITE);
+        g.setFont(new Font("Arial", Font.PLAIN, 12));
         g.drawString("Score: " + score, 10, 20);
+        g.drawString("HP: " + playerHP, 10, 40);
 
         // Draw enemies
         for (Enemy e : enemies) {
@@ -107,6 +145,8 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
 
     @Override
     public void actionPerformed(ActionEvent e) {
+        if (gameOver) return;
+
         // Spawn enemy every second
         spawnTimer += 16;
         if (spawnTimer >= 1000) {
@@ -114,12 +154,28 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
             spawnTimer = 0;
         }
 
-        // Update bullets
+        // Enemy shooting every 2 seconds
+        enemyShootTimer += 16;
+        if (enemyShootTimer >= 2000 && !enemies.isEmpty()) {
+            Enemy shooter = enemies.get(random.nextInt(enemies.size()));
+            enemyBullets.add(new Point(shooter.getBounds().x + shooter.getBounds().width / 2 - 2, shooter.getBounds().y + shooter.getBounds().height));
+            enemyShootTimer = 0;
+        }
+
+        // Update player bullets
         Iterator<Point> bit = bullets.iterator();
         while (bit.hasNext()) {
             Point b = bit.next();
             b.y -= 8;
             if (b.y < 0) bit.remove();
+        }
+
+        // Update enemy bullets
+        Iterator<Point> ebit = enemyBullets.iterator();
+        while (ebit.hasNext()) {
+            Point b = ebit.next();
+            b.y += 8;
+            if (b.y > getHeight()) ebit.remove();
         }
 
         // Update enemies
@@ -130,7 +186,7 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
         // Remove enemies that move off-screen
         enemies.removeIf(enemy -> enemy.getY() > getHeight());
 
-        // Check collisions: bullets vs enemies
+        // Check collisions: player bullets vs enemies
         Iterator<Enemy> eit = enemies.iterator();
         while (eit.hasNext()) {
             Enemy enemy = eit.next();
@@ -152,12 +208,32 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
             if (removed) continue;
         }
 
+        // Check collisions: enemy bullets vs player
+        Iterator<Point> ebit2 = enemyBullets.iterator();
+        while (ebit2.hasNext()) {
+            Point b = ebit2.next();
+            Rectangle shot = new Rectangle(b.x, b.y, 4, 10);
+            if (shot.intersects(ship.getBounds())) {
+                ebit2.remove();
+                playerHP -= 20;
+                if (playerHP <= 0) {
+                    playerHP = 0;
+                    gameOver = true;
+                    timer.stop();
+                    if (mouseShootTimer != null) mouseShootTimer.stop();
+                    if (spaceShootTimer != null) spaceShootTimer.stop();
+                }
+            }
+        }
+
         repaint();
     }
 
     // Keyboard controls: left/right movement and spacebar for shooting
     @Override
     public void keyPressed(KeyEvent e) {
+        if (gameOver) return;
+
         int code = e.getKeyCode();
         if (code == KeyEvent.VK_LEFT) {
             ship.moveLeft(getWidth());
@@ -188,7 +264,7 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
-            JFrame frame = new JFrame("Simple Star War - with Enhanced Appearance");
+            JFrame frame = new JFrame("Simple Star War - with Enemy Attacks");
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
             frame.add(new SimpleStarWar());
             frame.pack();
