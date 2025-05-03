@@ -56,4 +56,9 @@ public class PlayerShip {
         else if (x > 480 - WIDTH) this.x = 480 - WIDTH; // 480 is window width
         else this.x = x;
     }
+
+    // Get bounds for collision detection
+    public Rectangle getBounds() {
+        return new Rectangle(x, y, WIDTH, HEIGHT);
+    }
 }
