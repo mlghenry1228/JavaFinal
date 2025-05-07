@@ -7,6 +7,9 @@ public class Enemy {
     private int shootTimer = 0;
     private int shootCooldown = 1000 + (int)(Math.random() * 500); // 每隻間隔不同
     private int dx = (Math.random() < 0.5 ? -1 : 1) * (1 + (int)(Math.random() * 2)); // -2~2
+    private int fireQueue = 0;           // 還要發幾顆
+    private int fireDelay = 0;           // 間隔計時器
+    private static final int FIRE_INTERVAL = 200; // 每顆間隔 200ms
 
 
     // Construct enemy at given X position
@@ -39,7 +42,19 @@ public class Enemy {
         }
     }
 
-
+    public void scheduleFire(int count) {
+        fireQueue += count;
+    }
+    
+    // 是否要開始一輪射擊（定時觸發）
+    public boolean shouldStartShooting() {
+        shootTimer += 16;
+        if (shootTimer >= shootCooldown) {
+            shootTimer = 0;
+            return true;
+        }
+        return false;
+    }
     // Draw enemy as an alien ship with spikes and core
     public void draw(Graphics g) {
         // Main body (red irregular hexagon)
@@ -68,13 +83,17 @@ public class Enemy {
     public Rectangle getBounds() {
         return new Rectangle(x, y, width, height);
     }
-    public boolean shouldShoot() {
-        shootTimer += 16;
-        if (shootTimer >= shootCooldown) {
-            shootTimer = 0;
-            return true;
+    public boolean updateFire() {
+        if (fireQueue > 0) {
+            fireDelay += 16;
+            if (fireDelay >= FIRE_INTERVAL) {
+                fireDelay = 0;
+                fireQueue--;
+                return true; // 這一輪要發射
+            }
         }
-        return false;
+        return false; // 這一輪不發
     }
+    
     
 }
