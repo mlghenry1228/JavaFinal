@@ -34,7 +34,7 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
 
     // Game over flag
     private boolean gameOver = false;
-
+    private boolean gameWin = false;
     // Timer for game loop
     private Timer timer;
 
@@ -45,6 +45,7 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
     private Timer spaceShootTimer;
 
     private int highScore = 0;
+    private List<DiagonalBullet> diagonalBullets = new ArrayList<>();
 
     private boolean showLevelUp = false;
     private int levelUpTimer = 0;
@@ -124,8 +125,24 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
                 if (!gameOver && e.getButton() == MouseEvent.BUTTON1) {
                     bullets.add(new Point(ship.getX() + PlayerShip.WIDTH / 2 - 2, ship.getY()));
                     playSoundEffect("player_shoot.wav");
+                    if (score >= 100) {
+                        int x = ship.getX() + PlayerShip.WIDTH / 2 - 2;
+                        int y = ship.getY();
+                        diagonalBullets.add(new DiagonalBullet(x, y, 60));
+                        diagonalBullets.add(new DiagonalBullet(x, y, 120));
+                    }
+
+
                     mouseShootTimer = new Timer(200, evt -> {
                         bullets.add(new Point(ship.getX() + PlayerShip.WIDTH / 2 - 2, ship.getY()));
+                        
+                        if (score >= 100) {
+                            int x1 = ship.getX() + PlayerShip.WIDTH / 2 - 2;
+                            int y1 = ship.getY();
+                            diagonalBullets.add(new DiagonalBullet(x1, y1, 60));
+                            diagonalBullets.add(new DiagonalBullet(x1, y1, 120));
+                        }
+
                         playSoundEffect("player_shoot.wav");
                     });
                     mouseShootTimer.start();
@@ -250,37 +267,40 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
         if (gameOver) {
             stopBackgroundMusic();
             g.setColor(Color.WHITE);
+
             Font titleFont = new Font("Microsoft JhengHei", Font.BOLD, 30);
             if (!titleFont.canDisplay('遊')) {
                 titleFont = new Font("Noto Sans TC", Font.BOLD, 30);
             }
             g.setFont(titleFont);
-            String message = "遊戲結束";
+
+            String message = gameWin ? "你贏了！" : "遊戲結束";
             int messageWidth = g.getFontMetrics().stringWidth(message);
             g.drawString(message, (getWidth() - messageWidth) / 2, 140);
-        
+
             Font buttonFont = new Font("Microsoft JhengHei", Font.BOLD, 20);
             if (!buttonFont.canDisplay('再')) {
                 buttonFont = new Font("Noto Sans TC", Font.BOLD, 20);
             }
             g.setFont(buttonFont);
             g.setColor(Color.GRAY);
-        
+
             g.fillRect(restartButton.x, restartButton.y, restartButton.width, restartButton.height);
             g.fillRect(backToMenuButton.x, backToMenuButton.y, backToMenuButton.width, backToMenuButton.height);
             g.fillRect(exitButtonGameOver.x, exitButtonGameOver.y, exitButtonGameOver.width, exitButtonGameOver.height);
-        
+
             g.setColor(Color.BLACK);
             g.drawString("再來一場", restartButton.x + 50, restartButton.y + 25);
             g.drawString("返回主畫面", backToMenuButton.x + 35, backToMenuButton.y + 25);
             g.drawString("離開遊戲", exitButtonGameOver.x + 50, exitButtonGameOver.y + 25);
-        
+
             g.setFont(new Font("Microsoft JhengHei", Font.PLAIN, 16));
             g.setColor(Color.LIGHT_GRAY);
             g.drawString("得分：" + score + " 最高分：" + highScore, 140, 380);
 
             return;
         }
+
         
         if (showLevelUp) {
             g.setColor(Color.ORANGE);
@@ -305,6 +325,10 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
         for (Point b : enemyBullets) {
             g.fillRect(b.x, b.y, 4, 10);
         }
+        g.setColor(Color.CYAN);
+        for (DiagonalBullet db : diagonalBullets) {
+            db.draw(g);
+        }
 
         g.setColor(Color.WHITE);
         g.setFont(new Font("Arial", Font.PLAIN, 12));
@@ -321,18 +345,28 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
         if (gameOver) return;
         if (showMenu || gameOver) return;
         int level = score / 50;
-        spawnCooldown = Math.max(80, 250 - level * 30);
+        spawnCooldown = Math.max(40, 250 - level * 30);
 
         if (level > lastLevelShown) {
             showLevelUp = true;
             levelUpTimer = 0;
             lastLevelShown = level;
             enemyFireCountPerShot = level + 1;
+            playerHP = Math.min(playerHP + 2, 5);
         }
 
         spawnTimer += 16;
         if (spawnTimer >= spawnCooldown) {
-            enemies.add(new Enemy((int)(Math.random() * 440)));
+            Enemy newEnemy = new Enemy((int)(Math.random() * 440));
+            enemies.add(newEnemy);
+
+            // 敵人一出生就射一發
+            enemyBullets.add(new Point(
+                newEnemy.getBounds().x + newEnemy.getBounds().width / 2 - 2,
+                newEnemy.getBounds().y + newEnemy.getBounds().height
+            ));
+            playSoundEffect("enemy_shoot.wav");
+
             spawnTimer = 0;
         }
 
@@ -355,6 +389,7 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
             b.y -= 8;
             if (b.y < 0) bit.remove();
         }
+
 
         Iterator<Point> ebit = enemyBullets.iterator();
         while (ebit.hasNext()) {
@@ -386,6 +421,7 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
             Enemy enemy = eit.next();
             boolean removed = false;
 
+            // 直線子彈碰撞判斷
             Iterator<Point> bit2 = bullets.iterator();
             while (bit2.hasNext()) {
                 Point b = bit2.next();
@@ -398,8 +434,30 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
                     break;
                 }
             }
-
             if (removed) continue;
+
+            // 斜射子彈碰撞判斷
+            Iterator<DiagonalBullet> dbit2 = diagonalBullets.iterator();
+            while (dbit2.hasNext()) {
+                DiagonalBullet db = dbit2.next();
+                if (db.getBounds().intersects(enemy.getBounds())) {
+                    eit.remove();
+                    dbit2.remove();
+                    score++;
+                    break;
+                }
+            }
+        }
+
+
+        // ★ 更新對角子彈位置
+        Iterator<DiagonalBullet> dbit = diagonalBullets.iterator();
+        while (dbit.hasNext()) {
+            DiagonalBullet db = dbit.next();
+            db.move();
+            if (db.isOutOfBounds(getWidth(), getHeight())) {
+                dbit.remove();
+            }
         }
 
         Iterator<Point> ebit2 = enemyBullets.iterator();
@@ -427,6 +485,15 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
                 showLevelUp = false;
             }
         }
+        if (!gameWin && score >= 450) {
+            gameWin = true;
+            gameOver = true;
+            timer.stop();
+            if (mouseShootTimer != null) mouseShootTimer.stop();
+            if (spaceShootTimer != null) spaceShootTimer.stop();
+            if (score > highScore) highScore = score;
+        }
+
         
         repaint();
     }
