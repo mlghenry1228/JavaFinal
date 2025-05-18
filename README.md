@@ -1,5 +1,8 @@
-## JavaFinal – 星際大戰 (StarWar)
-# 🎮 題目：StarWar
+## JavaFinal – 星際大戰但是簡單 (StarWarsButSimpleAsItShouldBe)
+# 👽 遊戲流程
+* 請見 **game_flow.md** 及 **GameFlowChart.png**
+# 😎 展示PPT
+* https://www.canva.com/design/DAGnzYFBrlU/tC2PJ8VqN14R1lOCwJrkZg/edit?utm_content=DAGnzYFBrlU&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton
 # 👥 組員
 * B11132040 蕭恩園
 * B11032009 吳庭侑
