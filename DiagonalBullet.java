@@ -9,7 +9,7 @@ public class DiagonalBullet {
         this.x = x;
         this.y = y;
 
-        // ✅ 正確轉弧度
+        // 轉弧度
         double angleRad = Math.toRadians(angleDegree);
 
         dx = Math.cos(angleRad) * 8;
@@ -29,7 +29,7 @@ public class DiagonalBullet {
         g.fillRect((int)x, (int)y, 4, 10);
     }
 
-    public Rectangle getBounds() {
+    public Rectangle getBounds() {//取得子彈碰撞範圍
         return new Rectangle((int)x, (int)y, 4, 10);
     }
 }

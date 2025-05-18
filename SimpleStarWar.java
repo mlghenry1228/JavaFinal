@@ -133,7 +133,7 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
                     }
 
 
-                    mouseShootTimer = new Timer(200, evt -> {
+                    mouseShootTimer = new Timer(200, evt -> {//處理按著左鍵時的發射
                         bullets.add(new Point(ship.getX() + PlayerShip.WIDTH / 2 - 2, ship.getY()));
                         
                         if (score >= 100) {
@@ -150,7 +150,7 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
             }
 
             @Override
-            public void mouseReleased(MouseEvent e) {
+            public void mouseReleased(MouseEvent e) {//放開時停止計時
                 if (e.getButton() == MouseEvent.BUTTON1 && mouseShootTimer != null) {
                     mouseShootTimer.stop();
                 }
@@ -161,7 +161,7 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
         timer.start();
     }
 
-    private void playBackgroundMusic() {
+    private void playBackgroundMusic() {//播放音樂
         try {
             File musicFile = new File("bgm.wav");
             System.out.println("Loading bgm.wav from: " + musicFile.getAbsolutePath());
@@ -180,14 +180,14 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
         }
     }
 
-    private void stopBackgroundMusic() {
+    private void stopBackgroundMusic() {//停止音樂
         if (backgroundMusic != null && backgroundMusic.isRunning()) {
             backgroundMusic.stop();
             backgroundMusic.close();
         }
     }
 
-    private void playSoundEffect(String filePath) {
+    private void playSoundEffect(String filePath) {//播放射擊音效
         try {
             File soundFile = new File(filePath);
             if (!soundFile.exists()) {
@@ -345,9 +345,9 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
         if (gameOver) return;
         if (showMenu || gameOver) return;
         int level = score / 50;
-        spawnCooldown = Math.max(70, 250 - level * 30);
+        spawnCooldown = Math.max(70, 250 - level * 30);//根據分數減少敵人生成冷卻
 
-        if (level > lastLevelShown) {
+        if (level > lastLevelShown) {//每五十分將敵人每次射擊子彈加一以及回兩滴血
             showLevelUp = true;
             levelUpTimer = 0;
             lastLevelShown = level;
@@ -356,7 +356,7 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
         }
 
         spawnTimer += 16;
-        if (spawnTimer >= spawnCooldown) {
+        if (spawnTimer >= spawnCooldown) {//生成敵人
             Enemy newEnemy = new Enemy((int)(Math.random() * 440));
             enemies.add(newEnemy);
 
@@ -370,7 +370,7 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
             spawnTimer = 0;
         }
 
-        for (Enemy enemy : enemies) {
+        for (Enemy enemy : enemies) {//敵人射擊
             if (enemy.shouldStartShooting()) {
                 enemy.scheduleFire(enemyFireCountPerShot);
             }
@@ -383,7 +383,7 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
             }
         }
 
-        Iterator<Point> bit = bullets.iterator();
+        Iterator<Point> bit = bullets.iterator();//玩家子彈移動跟邊界檢查
         while (bit.hasNext()) {
             Point b = bit.next();
             b.y -= 8;
@@ -391,20 +391,20 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
         }
 
 
-        Iterator<Point> ebit = enemyBullets.iterator();
+        Iterator<Point> ebit = enemyBullets.iterator();//敵人子彈下落以及移除
         while (ebit.hasNext()) {
             Point b = ebit.next();
             b.y += 8;
             if (b.y > getHeight()) ebit.remove();
         }
 
-        for (Enemy enemy : enemies) {
+        for (Enemy enemy : enemies) {//更新每一個敵人的狀態與位置
             enemy.update();
         }
 
         enemies.removeIf(enemy -> enemy.getY() > getHeight());
 
-        if (enemies.size() > 25) {
+        if (enemies.size() > 25) {//超過25個敵人就輸了
             gameOver = true;
             timer.stop();
             if (mouseShootTimer != null) mouseShootTimer.stop();
@@ -460,7 +460,7 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
             }
         }
 
-        Iterator<Point> ebit2 = enemyBullets.iterator();
+        Iterator<Point> ebit2 = enemyBullets.iterator();//敵人子彈擊中玩家
         while (ebit2.hasNext()) {
             Point b = ebit2.next();
             Rectangle shot = new Rectangle(b.x, b.y, 4, 10);
@@ -479,13 +479,13 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
                 }
             }
         }
-        if (showLevelUp) {
+        if (showLevelUp) {//難度提升提示訊息顯示 1 秒後自動消失
             levelUpTimer += 16;
             if (levelUpTimer >= 1000) {
                 showLevelUp = false;
             }
         }
-        if (!gameWin && score >= 450) {
+        if (!gameWin && score >= 450) {//獲勝條件
             gameWin = true;
             gameOver = true;
             timer.stop();
@@ -499,7 +499,7 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
     }
 
     @Override
-    public void keyPressed(KeyEvent e) {
+    public void keyPressed(KeyEvent e) {//鍵盤控制
         if (gameOver) return;
 
         int code = e.getKeyCode();
@@ -520,19 +520,19 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
         }
     }
 
-    private void resetGame() {
+    private void resetGame() {//重置遊戲
         score = 0;
         playerHP = 3;
         gameOver = false;
         bullets.clear();
         enemyBullets.clear();
         enemies.clear();
-        diagonalBullets.clear(); // ⬅️ 記得也清空對角線子彈
+        diagonalBullets.clear(); 
         ship.setX(200);
         spawnTimer = 0;
-        spawnCooldown = 250; // ✅ 加上這行
-        enemyFireCountPerShot = 1; // ✅ 建議也重設發射數量
-        lastLevelShown = 0; // ✅ 難度提示也重設
+        spawnCooldown = 250; 
+        enemyFireCountPerShot = 1; 
+        lastLevelShown = 0; 
         showLevelUp = false;
 
         if (mouseShootTimer != null) mouseShootTimer.stop();
