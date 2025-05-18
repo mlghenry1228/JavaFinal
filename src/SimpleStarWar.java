@@ -6,63 +6,92 @@ import java.util.Iterator;
 import java.util.List;
 import javax.sound.sampled.*;
 import java.io.File;
-
+/**
+ * Main game panel for Simple Star War.
+ * Handles game loop, input, rendering, and sound.
+ */
 public class SimpleStarWar extends JPanel implements ActionListener, KeyListener {
-    // BGM
+     /** Background music clip. */
     private Clip backgroundMusic;
 
-    // Player ship
+    /** The player’s ship. */
     private PlayerShip ship;
 
-    // Player bullets
+    /** List of straight-firing player bullets. */
     private List<Point> bullets = new ArrayList<>();
 
-    // Enemy bullets
+    /** List of enemy bullets. */
     private List<Point> enemyBullets = new ArrayList<>();
 
-    // Enemies
+    /** List of enemy ships. */
     private List<Enemy> enemies = new ArrayList<>();
 
-    // Enemy spawn timer (ms)
+    /** Timer accumulator for spawning enemies (ms). */
     private int spawnTimer = 0;
 
-    // Score
+    /** Current player score. */
     private int score = 0;
 
-    // Player health points
+     /** Player health points. */
     private int playerHP = 3;
 
-    // Game over flag
+    /** Flag indicating game over state. */
     private boolean gameOver = false;
+
+    /** Flag indicating player victory state. */
     private boolean gameWin = false;
-    // Timer for game loop
+
+    /** Swing timer driving the game loop (≈16 ms tick). */
     private Timer timer;
 
-    // Timer for continuous shooting (mouse)
+    /** Timer for continuous mouse shooting. */
     private Timer mouseShootTimer;
 
-    // Timer for continuous shooting (spacebar)
+    /** Timer for continuous spacebar shooting. */
     private Timer spaceShootTimer;
 
+    /** Highest score recorded this session. */
     private int highScore = 0;
+
+    /** List of diagonal bullets (±60°) fired by player. */
     private List<DiagonalBullet> diagonalBullets = new ArrayList<>();
 
+    /** Flag to show "level up" message. */
     private boolean showLevelUp = false;
+
+    /** Timer accumulator for level-up message duration. */
     private int levelUpTimer = 0;
+
+    /** Last level at which the "level up" was shown. */
     private int lastLevelShown = 0;
 
+    /** Number of bullets each enemy fires per shoot event. */
     private int enemyFireCountPerShot = 1;
 
-    private boolean showMenu = true;  // 初始顯示主畫面
-    private Rectangle startButton = new Rectangle(180, 220, 120, 40);  // 按鈕區域
-    private Rectangle exitButton = new Rectangle(180, 280, 120, 40); // 離開按鈕
+    /** Flag to show the main menu. */
+    private boolean showMenu = true;
+
+    /** Rectangle for the "Start Game" button area. */
+    private Rectangle startButton = new Rectangle(180, 220, 120, 40);
+
+    /** Rectangle for the "Exit Game" button on the menu. */
+    private Rectangle exitButton = new Rectangle(180, 280, 120, 40);
+
+    /** Rectangle for the "Restart" button on game over. */
     private Rectangle restartButton = new Rectangle(150, 200, 180, 40);
+
+    /** Rectangle for the "Back to Menu" button on game over. */
     private Rectangle backToMenuButton = new Rectangle(150, 260, 180, 40);
+
+    /** Rectangle for the "Exit Game" button on game over. */
     private Rectangle exitButtonGameOver = new Rectangle(150, 320, 180, 40);
 
-    private int spawnCooldown = 250;      // 初始 0.25 秒
+    /** Cooldown interval between enemy spawns (ms). */
+    private int spawnCooldown = 250;
 
-    // Constructor
+    /**
+     * Constructs the game panel, initializes input listeners, timers, and starts the loop.
+     */
     public SimpleStarWar() {
         setPreferredSize(new Dimension(480, 500));
         setBackground(Color.BLACK);
@@ -133,7 +162,7 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
                     }
 
 
-                    mouseShootTimer = new Timer(200, evt -> {//處理按著左鍵時的發射
+                    mouseShootTimer = new Timer(200, evt -> {//deal with dragged mouse shooting
                         bullets.add(new Point(ship.getX() + PlayerShip.WIDTH / 2 - 2, ship.getY()));
                         
                         if (score >= 100) {
@@ -150,7 +179,7 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
             }
 
             @Override
-            public void mouseReleased(MouseEvent e) {//放開時停止計時
+            public void mouseReleased(MouseEvent e) {//release than stop counting
                 if (e.getButton() == MouseEvent.BUTTON1 && mouseShootTimer != null) {
                     mouseShootTimer.stop();
                 }
@@ -160,8 +189,10 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
         timer = new Timer(16, this);
         timer.start();
     }
-
-    private void playBackgroundMusic() {//播放音樂
+    /**
+     * Plays background music in a continuous loop.
+     */
+    private void playBackgroundMusic() {
         try {
             File musicFile = new File("bgm.wav");
             System.out.println("Loading bgm.wav from: " + musicFile.getAbsolutePath());
@@ -179,15 +210,21 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
             e.printStackTrace();
         }
     }
-
-    private void stopBackgroundMusic() {//停止音樂
+    /**
+     * Stops and closes the background music clip if playing.
+     */
+    private void stopBackgroundMusic() {
         if (backgroundMusic != null && backgroundMusic.isRunning()) {
             backgroundMusic.stop();
             backgroundMusic.close();
         }
     }
-
-    private void playSoundEffect(String filePath) {//播放射擊音效
+    /**
+     * Plays a one-shot sound effect from the given file path.
+     *
+     * @param filePath relative path to the sound file
+     */
+    private void playSoundEffect(String filePath) {
         try {
             File soundFile = new File(filePath);
             if (!soundFile.exists()) {
@@ -202,7 +239,12 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
             System.out.println("Error playing sound effect: " + e.getMessage());
         }
     }
-
+    /**
+     * Handles all rendering: menu, game over screens, level-up message,
+     * player ship, bullets, enemies, and HUD.
+     *
+     * @param g Graphics context for drawing
+     */
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -339,15 +381,21 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
             e.draw(g);
         }
     }
-
+    
+    /**
+     * Game loop tick: spawn enemies, move and fire bullets,
+     * handle collisions, update state, and repaint.
+     *
+     * @param e ActionEvent from Timer
+     */
     @Override
     public void actionPerformed(ActionEvent e) {
         if (gameOver) return;
         if (showMenu || gameOver) return;
         int level = score / 50;
-        spawnCooldown = Math.max(70, 250 - level * 30);//根據分數減少敵人生成冷卻
+        spawnCooldown = Math.max(70, 250 - level * 30);//according to score born enemy faster
 
-        if (level > lastLevelShown) {//每五十分將敵人每次射擊子彈加一以及回兩滴血
+        if (level > lastLevelShown) {//every 50 points, enemy shoot one more bullet and player heal 2hp 
             showLevelUp = true;
             levelUpTimer = 0;
             lastLevelShown = level;
@@ -356,11 +404,11 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
         }
 
         spawnTimer += 16;
-        if (spawnTimer >= spawnCooldown) {//生成敵人
+        if (spawnTimer >= spawnCooldown) {//born enemy
             Enemy newEnemy = new Enemy((int)(Math.random() * 440));
             enemies.add(newEnemy);
 
-            // 敵人一出生就射一發
+            // enemy shoot when born
             enemyBullets.add(new Point(
                 newEnemy.getBounds().x + newEnemy.getBounds().width / 2 - 2,
                 newEnemy.getBounds().y + newEnemy.getBounds().height
@@ -370,7 +418,7 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
             spawnTimer = 0;
         }
 
-        for (Enemy enemy : enemies) {//敵人射擊
+        for (Enemy enemy : enemies) {//enemy shoot
             if (enemy.shouldStartShooting()) {
                 enemy.scheduleFire(enemyFireCountPerShot);
             }
@@ -383,7 +431,7 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
             }
         }
 
-        Iterator<Point> bit = bullets.iterator();//玩家子彈移動跟邊界檢查
+        Iterator<Point> bit = bullets.iterator();//moving player bullet and remove
         while (bit.hasNext()) {
             Point b = bit.next();
             b.y -= 8;
@@ -391,20 +439,20 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
         }
 
 
-        Iterator<Point> ebit = enemyBullets.iterator();//敵人子彈下落以及移除
+        Iterator<Point> ebit = enemyBullets.iterator();//moving enemy bullet and remove
         while (ebit.hasNext()) {
             Point b = ebit.next();
             b.y += 8;
             if (b.y > getHeight()) ebit.remove();
         }
 
-        for (Enemy enemy : enemies) {//更新每一個敵人的狀態與位置
+        for (Enemy enemy : enemies) {//update enemy
             enemy.update();
         }
 
         enemies.removeIf(enemy -> enemy.getY() > getHeight());
 
-        if (enemies.size() > 25) {//超過25個敵人就輸了
+        if (enemies.size() > 25) {//more than 25 ememies than lose
             gameOver = true;
             timer.stop();
             if (mouseShootTimer != null) mouseShootTimer.stop();
@@ -421,7 +469,7 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
             Enemy enemy = eit.next();
             boolean removed = false;
 
-            // 直線子彈碰撞判斷
+            // determine bullet collide
             Iterator<Point> bit2 = bullets.iterator();
             while (bit2.hasNext()) {
                 Point b = bit2.next();
@@ -436,7 +484,7 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
             }
             if (removed) continue;
 
-            // 斜射子彈碰撞判斷
+            // determine DiagonalBullet collide
             Iterator<DiagonalBullet> dbit2 = diagonalBullets.iterator();
             while (dbit2.hasNext()) {
                 DiagonalBullet db = dbit2.next();
@@ -450,7 +498,7 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
         }
 
 
-        // ★ 更新對角子彈位置
+        // ★ update DiagonalBullet
         Iterator<DiagonalBullet> dbit = diagonalBullets.iterator();
         while (dbit.hasNext()) {
             DiagonalBullet db = dbit.next();
@@ -460,7 +508,7 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
             }
         }
 
-        Iterator<Point> ebit2 = enemyBullets.iterator();//敵人子彈擊中玩家
+        Iterator<Point> ebit2 = enemyBullets.iterator();//player hit by enemy bullet
         while (ebit2.hasNext()) {
             Point b = ebit2.next();
             Rectangle shot = new Rectangle(b.x, b.y, 4, 10);
@@ -479,13 +527,13 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
                 }
             }
         }
-        if (showLevelUp) {//難度提升提示訊息顯示 1 秒後自動消失
+        if (showLevelUp) {//message appear for 1 second
             levelUpTimer += 16;
             if (levelUpTimer >= 1000) {
                 showLevelUp = false;
             }
         }
-        if (!gameWin && score >= 450) {//獲勝條件
+        if (!gameWin && score >= 450) {//win condition
             gameWin = true;
             gameOver = true;
             timer.stop();
@@ -497,9 +545,14 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
         
         repaint();
     }
-
+    
+    /**
+     * Handles keyboard presses for moving and shooting.
+     *
+     * @param e KeyEvent containing key code
+     */
     @Override
-    public void keyPressed(KeyEvent e) {//鍵盤控制
+    public void keyPressed(KeyEvent e) {//keyboard control
         if (gameOver) return;
 
         int code = e.getKeyCode();
@@ -520,7 +573,7 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
         }
     }
 
-    private void resetGame() {//重置遊戲
+    private void resetGame() {//reset game
         score = 0;
         playerHP = 3;
         gameOver = false;
@@ -541,17 +594,19 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
         repaint();
     }
 
-    
+    /** {@inheritDoc} */
     @Override
     public void keyReleased(KeyEvent e) {
         if (e.getKeyCode() == KeyEvent.VK_SPACE && spaceShootTimer != null) {
             spaceShootTimer.stop();
         }
     }
-
+     /** {@inheritDoc} */
     @Override
     public void keyTyped(KeyEvent e) { }
-
+    /**
+     * Resets all game state to start a new game.
+     */
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
             JFrame frame = new JFrame("Simple Star War - with Enemy Attacks");
