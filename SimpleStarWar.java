@@ -345,7 +345,7 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
         if (gameOver) return;
         if (showMenu || gameOver) return;
         int level = score / 50;
-        spawnCooldown = Math.max(40, 250 - level * 30);
+        spawnCooldown = Math.max(70, 250 - level * 30);
 
         if (level > lastLevelShown) {
             showLevelUp = true;
@@ -404,7 +404,7 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
 
         enemies.removeIf(enemy -> enemy.getY() > getHeight());
 
-        if (enemies.size() > 15) {
+        if (enemies.size() > 25) {
             gameOver = true;
             timer.stop();
             if (mouseShootTimer != null) mouseShootTimer.stop();
@@ -527,13 +527,20 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
         bullets.clear();
         enemyBullets.clear();
         enemies.clear();
+        diagonalBullets.clear(); // ⬅️ 記得也清空對角線子彈
         ship.setX(200);
         spawnTimer = 0;
+        spawnCooldown = 250; // ✅ 加上這行
+        enemyFireCountPerShot = 1; // ✅ 建議也重設發射數量
+        lastLevelShown = 0; // ✅ 難度提示也重設
+        showLevelUp = false;
+
         if (mouseShootTimer != null) mouseShootTimer.stop();
         if (spaceShootTimer != null) spaceShootTimer.stop();
         timer.start();
         repaint();
     }
+
     
     @Override
     public void keyReleased(KeyEvent e) {
