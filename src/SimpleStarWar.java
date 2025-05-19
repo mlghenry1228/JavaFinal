@@ -577,6 +577,7 @@ public class SimpleStarWar extends JPanel implements ActionListener, KeyListener
         score = 0;
         playerHP = 3;
         gameOver = false;
+        gameWin = false;
         bullets.clear();
         enemyBullets.clear();
         enemies.clear();
